@@ -1,4 +1,7 @@
+import { useSettingsStore } from '~/stores/settings'
+
 export function useNotification() {
+  const settings = useSettingsStore()
   async function requestPermission(): Promise<boolean> {
     if (!import.meta.client || !('Notification' in window)) return false
     if (Notification.permission === 'granted') return true
@@ -8,6 +11,8 @@ export function useNotification() {
 
   function sendNotification(title: string, body: string) {
     if (!import.meta.client || !('Notification' in window)) return
+    // Respect user preference in settings
+    if (!settings.browserNotifications) return
     if (Notification.permission !== 'granted') return
     try {
       new Notification(title, {

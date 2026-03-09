@@ -82,6 +82,56 @@
               />
             </button>
           </div>
+
+          <div class="flex items-center justify-between p-3 border-3 border-ink bg-white shadow-brutal-sm">
+            <div>
+              <div class="font-bold text-sm text-ink">Wake Lock (mobile)</div>
+              <div class="text-xs text-ink/50">Coba mencegah layar mati saat timer berjalan</div>
+            </div>
+            <button
+              class="w-12 h-6 border-3 border-ink transition-colors relative flex-shrink-0"
+              :style="{ backgroundColor: settings.enableWakeLock ? '#00C896' : '#e5e5e5' }"
+              @click="settings.toggleWakeLock()"
+            >
+              <span
+                class="absolute top-0.5 w-4 h-3.5 bg-white border-2 border-ink transition-all"
+                :class="settings.enableWakeLock ? 'left-5' : 'left-0.5'"
+              />
+            </button>
+          </div>
+        </section>
+
+        <!-- Sounds -->
+        <section>
+          <h3 class="font-black text-sm uppercase tracking-wider text-ink">Sounds</h3>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-1.5">Alarm file (relative)</label>
+              <div class="flex gap-2 items-center">
+                <input v-model="alarmFile" type="text" class="flex-1 border-3 border-ink px-3 py-2 bg-white"/>
+                <button class="px-3 py-2 border-3 border-ink bg-white" @click="playPreview(alarmFile)">Play</button>
+                <button class="px-3 py-2 border-3 border-ink bg-white" @click="saveAlarm()">Save</button>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <input type="file" accept="audio/*" @change="onAlarmFileChange" />
+                <div class="text-xs text-ink/50">Pilih file lokal untuk menyimpannya sebagai preferensi (disimpan di localStorage)</div>
+              </div>
+              <div class="text-xs text-ink/50 mt-1">Tempatkan file di <strong>/public/sounds/</strong> lalu isi mis. /sounds/my_alarm.mp3</div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-1.5">Tick file (relative)</label>
+              <div class="flex gap-2 items-center">
+                <input v-model="tickFile" type="text" class="flex-1 border-3 border-ink px-3 py-2 bg-white"/>
+                <button class="px-3 py-2 border-3 border-ink bg-white" @click="playPreview(tickFile)">Play</button>
+                <button class="px-3 py-2 border-3 border-ink bg-white" @click="saveTick()">Save</button>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <input type="file" accept="audio/*" @change="onTickFileChange" />
+                <div class="text-xs text-ink/50">Pilih file lokal untuk menyimpannya sebagai preferensi (disimpan di localStorage)</div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- Timer presets info -->
@@ -143,6 +193,58 @@ const customBreak = computed({
   get: () => settings.customBreakMinutes,
   set: (v) => settings.setCustomBreak(v),
 })
+
+// Local bindings for file inputs
+const alarmFile = ref(settings.alarmFileUrl || '')
+const tickFile = ref(settings.tickFileUrl || '')
+
+function playPreview(url: string) {
+  if (!import.meta.client || !url) return
+  try {
+    const a = new Audio(url)
+    a.volume = settings.alarmVolume ?? 0.8
+    a.play().catch(() => {})
+  } catch (_) {}
+}
+
+function saveAlarm() {
+  settings.setAlarmFile(alarmFile.value)
+}
+
+function saveTick() {
+  settings.setTickFile(tickFile.value)
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('file read error'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onAlarmFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files && input.files[0]
+  if (!f) return
+  try {
+    const data = await readFileAsDataUrl(f)
+    alarmFile.value = data
+    settings.setAlarmFile(data)
+  } catch (_) {}
+}
+
+async function onTickFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files && input.files[0]
+  if (!f) return
+  try {
+    const data = await readFileAsDataUrl(f)
+    tickFile.value = data
+    settings.setTickFile(data)
+  } catch (_) {}
+}
 
 async function toggleNotifications() {
   if (!settings.browserNotifications) {
